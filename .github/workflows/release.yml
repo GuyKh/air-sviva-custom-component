@@ -53,7 +53,7 @@ jobs:
           zip air-sviva-custom-component.zip -r .
 
       - name: "Upload release artifact"
-        uses: "softprops/action-gh-release@v2.6.1"
+        uses: "softprops/action-gh-release@v3"
         with:
           name: "Air Sviva Custom Component"
           files: "release/air-sviva-custom-component.zip"
