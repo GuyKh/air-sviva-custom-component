@@ -115,7 +115,7 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         index_response: list[StationIndexData] = []
         try:
             index_response = await client.get_stations_latest_index(
-                region_ids=all_regions,
+                region_ids=[self._region_id],
                 hours_back=24,
             )
         except SvivaAirError as exc:
