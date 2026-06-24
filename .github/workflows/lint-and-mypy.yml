@@ -14,7 +14,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout the repository"
-        uses: "actions/checkout@v6.0.2"
+        uses: "actions/checkout@v7.0.0"
 
       - name: "Run Ruff linting"
         run: pipx run ruff check .
@@ -27,7 +27,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout the repository"
-        uses: "actions/checkout@v6.0.2"
+        uses: "actions/checkout@v7.0.0"
 
       - name: "Run MyPy type checking"
         run: pipx run mypy .
