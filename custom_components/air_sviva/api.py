@@ -107,6 +107,23 @@ class RegionStationData:
     region_data: RegionData | None = None
 
 
+@dataclass
+class StationIndexData:
+    """Latest official air quality index data for a station."""
+
+    station_id: int
+    datetime: str | None = None
+    pollutant: str | None = None
+    index_id: int | None = None
+    index: float | None = None
+    value: float | None = None
+    color: str | None = None
+    description: str | None = None
+    pollutant_id: int | None = None
+    pollutant_time_base: int | None = None
+    indexes: list[dict[str, Any]] | None = None
+
+
 def _fallback_url(url: str) -> str | None:
     parsed = urlparse(url)
     replacement = FALLBACK_DOMAINS.get(parsed.netloc)
@@ -181,6 +198,22 @@ def _channel_from_dict(data: dict[str, Any]) -> ChannelReading:
         active=bool(data.get("active")),
         pollutant_id=data.get("pollutantId"),
         datetime=data.get("datetime"),
+    )
+
+
+def _station_index_from_dict(data: dict[str, Any]) -> StationIndexData:
+    return StationIndexData(
+        station_id=data["stationId"],
+        datetime=data.get("datetime"),
+        pollutant=data.get("pollutant"),
+        index_id=data.get("indexId"),
+        index=data.get("index"),
+        value=data.get("value"),
+        color=data.get("color"),
+        description=data.get("description"),
+        pollutant_id=data.get("pollutantId"),
+        pollutant_time_base=data.get("PollutantTimeBase"),
+        indexes=data.get("indexes"),
     )
 
 
@@ -333,3 +366,23 @@ class SvivaAirClient:
                 )
             )
         return stations
+
+    async def get_stations_latest_index(
+        self,
+        region_ids: list[int],
+        hours_back: int = 24,
+    ) -> list[StationIndexData]:
+        """Get latest official index data for the requested regions."""
+        ids = ",".join(str(region_id) for region_id in region_ids)
+        query = f"?unitConversion=true&regionsIds={ids}&hoursBack={hours_back}"
+        response = await self._authorized_request(
+            "GET",
+            BASE_URL + "stations/index/latest" + query,
+        )
+        if not isinstance(response, dict):
+            return []
+        return [
+            _station_index_from_dict(item)
+            for item in (response.get("data") or [])
+            if item.get("stationId") is not None
+        ]
