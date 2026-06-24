@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from air_sviva_api.models.exceptions import SvivaAirError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, LOGGER, SCAN_INTERVAL
+from .const import CONF_REGION_ID, CONF_STATION_ID, DOMAIN, LOGGER, SCAN_INTERVAL
 
 if TYPE_CHECKING:
     from air_sviva_api.client import SvivaAirClient
@@ -56,14 +55,14 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
-        self._station_id = config_entry.data["station_id"]
-        self._region_id = config_entry.data["region_id"]
+        self._station_id = config_entry.data[CONF_STATION_ID]
+        self._region_id = config_entry.data[CONF_REGION_ID]
 
         super().__init__(
             hass=hass,
             logger=LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(minutes=SCAN_INTERVAL.total_seconds() / 60),
+            update_interval=SCAN_INTERVAL,
         )
         self.config_entry = config_entry
 
@@ -72,11 +71,9 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         client: SvivaAirClient = entry_data.client
 
         try:
-            # Fetch latest data for all regions (station could be in any region)
-            # Using hours_back=4 to get recent data
-            all_regions = [r.region_id for r in (await client.get_regions())]
+            # Fetch latest data for the configured station's region
             response: list[RegionStationData] = await client.get_regions_latest_data(
-                region_ids=all_regions,
+                region_ids=[self._region_id],
                 hours_back=4,
             )
         except SvivaAirError as exc:
