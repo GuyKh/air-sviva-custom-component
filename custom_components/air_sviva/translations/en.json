@@ -37,6 +37,7 @@
             "pm1": {"name": "PM1"},
             "pm4": {"name": "PM4"},
             "co": {"name": "CO"},
+            "air_quality_index": {"name": "Air Quality Index"},
             "co2": {"name": "CO₂"},
             "h2s": {"name": "H₂S"},
             "nh3": {"name": "NH₃"},

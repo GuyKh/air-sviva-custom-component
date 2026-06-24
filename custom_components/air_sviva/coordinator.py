@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-    from .api import RegionStationData, SvivaAirClient
+    from .api import RegionStationData, StationIndexData, SvivaAirClient
     from .data import AirSvivaData
 
 
@@ -45,6 +45,27 @@ def _parse_station_channels(station_data: RegionStationData) -> dict[str, Any]:
         }
 
     return channels
+
+
+def _parse_station_index(
+    station_index: StationIndexData | None,
+) -> dict[str, Any] | None:
+    """Parse station index data into a dict for sensors."""
+    if station_index is None:
+        return None
+
+    return {
+        "datetime": station_index.datetime,
+        "pollutant": station_index.pollutant,
+        "index_id": station_index.index_id,
+        "index": station_index.index,
+        "value": station_index.value,
+        "color": station_index.color,
+        "description": station_index.description,
+        "pollutant_id": station_index.pollutant_id,
+        "pollutant_time_base": station_index.pollutant_time_base,
+        "indexes": station_index.indexes or [],
+    }
 
 
 class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -91,7 +112,24 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             msg = f"Unexpected error: {exc}"
             raise UpdateFailed(msg) from exc
 
-        data: dict[str, Any] = {"station_id": self._station_id, "channels": {}}
+        index_response: list[StationIndexData] = []
+        try:
+            index_response = await client.get_stations_latest_index(
+                region_ids=all_regions,
+                hours_back=24,
+            )
+        except SvivaAirError as exc:
+            LOGGER.warning(
+                "Failed to fetch official station index for %s: %s",
+                self._station_id,
+                exc,
+            )
+
+        data: dict[str, Any] = {
+            "station_id": self._station_id,
+            "channels": {},
+            "station_index": None,
+        }
 
         # Find the selected station in the response
         station_data = next(
@@ -106,6 +144,12 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Parse all channels for this station
         data["channels"] = _parse_station_channels(station_data)
+
+        station_index = next(
+            (s for s in index_response if s.station_id == self._station_id),
+            None,
+        )
+        data["station_index"] = _parse_station_index(station_index)
 
         # Get the datetime from the first channel
         if station_data.region_data and station_data.region_data.channels:

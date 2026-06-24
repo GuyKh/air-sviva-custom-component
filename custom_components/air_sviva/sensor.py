@@ -10,6 +10,8 @@ from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN
 from .entity import AirSvivaEntity
 
+INDEX_SENSOR_KEY = "air_quality_index"
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
@@ -44,7 +46,14 @@ async def async_setup_entry(
 
     station_id = entry_data.station_id
 
-    async_add_entities(
+    entities: list[SensorEntity] = [
+        AirSvivaIndexSensor(
+            coordinator=coordinator,
+            entry_id=entry.entry_id,
+            station_id=station_id,
+        )
+    ]
+    entities.extend(
         AirSvivaSensor(
             coordinator=coordinator,
             entry_id=entry.entry_id,
@@ -57,6 +66,7 @@ async def async_setup_entry(
         )
         for pollutant, channel_data in data["channels"].items()
     )
+    async_add_entities(entities)
 
 
 class AirSvivaSensor(AirSvivaEntity, SensorEntity):
@@ -128,3 +138,49 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
             attrs["max_value"] = 360
             attrs["min_value"] = 0
         return attrs
+
+
+class AirSvivaIndexSensor(AirSvivaEntity, SensorEntity):
+    """Air Sviva official air quality index sensor."""
+
+    def __init__(
+        self,
+        coordinator: AirSvivaUpdateCoordinator,
+        entry_id: str,
+        station_id: int,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry_id, station_id)
+        self._attr_unique_id = f"sviva_station_{station_id}_{INDEX_SENSOR_KEY}"
+        self.entity_id = f"sensor.sviva_station_{station_id}_{INDEX_SENSOR_KEY}"
+        self._attr_translation_key = INDEX_SENSOR_KEY
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the current official air quality index value."""
+        data = self.coordinator.data
+        if data is None:
+            return None
+        station_index = data.get("station_index")
+        if station_index is None:
+            return None
+        return station_index.get("index")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        data = self.coordinator.data
+        if data is None:
+            return {}
+        station_index = data.get("station_index")
+        if station_index is None:
+            return {}
+        return {
+            "pollutant": station_index.get("pollutant"),
+            "pollutant_id": station_index.get("pollutant_id"),
+            "value": station_index.get("value"),
+            "description": station_index.get("description"),
+            "color": station_index.get("color"),
+            "datetime": station_index.get("datetime"),
+            "indexes": station_index.get("indexes", []),
+        }
