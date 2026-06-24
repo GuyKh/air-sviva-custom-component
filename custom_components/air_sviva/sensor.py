@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -11,6 +12,7 @@ from .const import DOMAIN
 from .entity import AirSvivaEntity
 
 INDEX_SENSOR_KEY = "air_quality_index"
+NORMALIZED_INDEX_SCALE = "uv_like_0_11"
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -29,6 +31,46 @@ class SensorInitData:
     station_name: str
     pollutant_name: str
     channel_data: dict[str, Any]
+
+
+def normalize_air_quality_index(index: Any) -> float | None:
+    """Normalize the official Air Sviva index to a UV-like risk scale."""
+    if index is None:
+        return None
+
+    try:
+        official_index = float(index)
+    except (TypeError, ValueError):
+        return None
+
+    if not isfinite(official_index):
+        return None
+
+    if official_index > 100:
+        return 0.0
+    if official_index >= 50:
+        normalized = _scale_index_range(official_index, 100, 50, 0.0, 2.9)
+    elif official_index >= -1:
+        normalized = _scale_index_range(official_index, 50, -1, 3.0, 5.9)
+    elif official_index >= -201:
+        normalized = _scale_index_range(official_index, -1, -201, 6.0, 7.9)
+    elif official_index >= -402:
+        normalized = _scale_index_range(official_index, -201, -402, 8.0, 11.0)
+    else:
+        return 11.0
+
+    return round(normalized, 1)
+
+
+def _scale_index_range(
+    value: float,
+    official_high: float,
+    official_low: float,
+    normalized_low: float,
+    normalized_high: float,
+) -> float:
+    ratio = (official_high - value) / (official_high - official_low)
+    return normalized_low + ratio * (normalized_high - normalized_low)
 
 
 async def async_setup_entry(
@@ -182,5 +224,7 @@ class AirSvivaIndexSensor(AirSvivaEntity, SensorEntity):
             "description": station_index.get("description"),
             "color": station_index.get("color"),
             "datetime": station_index.get("datetime"),
+            "normalized_index": normalize_air_quality_index(station_index.get("index")),
+            "normalized_index_scale": NORMALIZED_INDEX_SCALE,
             "indexes": station_index.get("indexes", []),
         }
