@@ -94,7 +94,6 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         # Check if this is wind direction for circular sensor handling
         self._is_wind_direction = pollutant.upper() in ("WD", "WDD")
 
-        self._attr_native_value = init_data.channel_data.get("value")
         units = init_data.channel_data.get("units") or "AQI"
         self._attr_native_unit_of_measurement = units
 

@@ -126,21 +126,19 @@ class AirSvivaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             LOGGER.error("Station selection step reached but no region selected")
             return self.async_abort(reason="unknown")
 
-        stations = self._stations_by_region.get(self._selected_region_id, [])
-        active_stations = [s for s in stations if getattr(s, "active", False)]
+        active_stations = self._stations_by_region.get(self._selected_region_id, [])
 
         if not active_stations:
             LOGGER.warning(
-                "No active stations in region %s (total stations: %d)",
+                "No active stations in region %s",
                 self._selected_region_id,
-                len(stations),
             )
             return self.async_abort(reason="no_stations")
 
         if user_input is not None and CONF_STATION_ID in user_input:
             station_id = user_input[CONF_STATION_ID]
             selected_station = next(
-                (s for s in stations if s.station_id == station_id), None
+                (s for s in active_stations if s.station_id == station_id), None
             )
             if selected_station:
                 LOGGER.debug("Selected station: %s", selected_station.name)
@@ -155,7 +153,7 @@ class AirSvivaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             LOGGER.error(
                 "Selected station_id %s not found in stations list (available: %s)",
                 station_id,
-                [s.station_id for s in stations],
+                [s.station_id for s in active_stations],
             )
             errors["base"] = "invalid_station"
 

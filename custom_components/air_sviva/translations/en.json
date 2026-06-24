@@ -29,8 +29,8 @@
         "sensor": {
             "so2": { "name": "SO₂" },
             "no2": { "name": "NO₂" },
-"no": { "name": "NO" },
-"nox": { "name": "NOₓ" },
+            "no": { "name": "NO" },
+            "nox": { "name": "NOₓ" },
             "o3": {"name": "O₃"},
             "pm2_5": {"name": "PM2.5"},
             "pm10": {"name": "PM10"},
