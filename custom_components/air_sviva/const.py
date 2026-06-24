@@ -18,5 +18,3 @@ SCAN_INTERVAL = timedelta(minutes=10)
 DEFAULT_HOURS_BACK = 4
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
-
-SERVICE_DEBUG_GET_COORDINATOR_DATA = "debug_get_coordinator_data"
