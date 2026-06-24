@@ -6,11 +6,10 @@ import math
 from typing import TYPE_CHECKING
 
 import voluptuous as vol
-from air_sviva_api.client import SvivaAirClient
-from air_sviva_api.models.exceptions import SvivaAirError
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
+from .api import SvivaAirClient, SvivaAirError
 from .const import (
     CONF_REGION_ID,
     CONF_STATION_ID,
@@ -20,7 +19,7 @@ from .const import (
 )
 
 if TYPE_CHECKING:
-    from air_sviva_api.models.region import Region, Station
+    from .api import Region, Station
 
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

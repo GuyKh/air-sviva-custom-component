@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from air_sviva_api.client import SvivaAirClient
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
 
+from .api import SvivaAirClient
 from .const import (
     CONF_REGION_ID,
     CONF_STATION_ID,

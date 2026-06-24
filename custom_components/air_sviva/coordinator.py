@@ -4,17 +4,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from air_sviva_api.models.exceptions import SvivaAirError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api import SvivaAirError
 from .const import CONF_REGION_ID, CONF_STATION_ID, DOMAIN, LOGGER, SCAN_INTERVAL
 
 if TYPE_CHECKING:
-    from air_sviva_api.client import SvivaAirClient
-    from air_sviva_api.models.reading import RegionStationData
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
+    from .api import RegionStationData, SvivaAirClient
     from .data import AirSvivaData
 
 

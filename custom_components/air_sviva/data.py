@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from air_sviva_api.client import SvivaAirClient
     from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
     from homeassistant.loader import Integration
+
+    from .api import SvivaAirClient
 
 
 @dataclass
