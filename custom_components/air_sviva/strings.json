@@ -1,0 +1,20 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Select Region",
+                "description": "Select the monitoring region. The region closest to your location is pre-selected.",
+                "data": {
+                    "region_id": "Region"
+                }
+            },
+            "select_station": {
+                "title": "Select Station",
+                "description": "Select your monitoring station. The station closest to your location in the selected region is pre-selected.",
+                "data": {
+                    "station_id": "Station"
+                }
+            }
+        }
+    }
+}

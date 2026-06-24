@@ -1,0 +1,14 @@
+{
+  "domain": "air_sviva",
+  "name": "Air Sviva",
+  "codeowners": [
+    "@GuyKh"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/GuyKh/air-sviva-custom-component",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/GuyKh/air-sviva-custom-component/issues",
+  "loggers": ["air_sviva", "air_sviva_api"],
+  "requirements": ["air-sviva-api==0.0.1"],
+  "version": "0.0.1"
+}

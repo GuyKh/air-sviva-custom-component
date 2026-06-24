@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Planning
+.planning/
+
+# Token optimizer
+token-optimizer/

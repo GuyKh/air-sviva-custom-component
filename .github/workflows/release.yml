@@ -1,0 +1,70 @@
+name: "Release"
+
+on:
+  release:
+    types:
+      - "published"
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    name: "Ruff"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v6.0.2"
+
+      - name: "Run Ruff linting"
+        run: pipx run ruff check .
+
+      - name: "Run Ruff formatting check"
+        run: pipx run ruff format . --check
+
+  typecheck:
+    name: "MyPy"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v6.0.2"
+
+      - name: "Run MyPy type checking"
+        run: pipx run mypy .
+
+  release:
+    name: "Release"
+    runs-on: "ubuntu-latest"
+    needs: [lint, typecheck]
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v6"
+
+      - name: "Prepare release package"
+        shell: "bash"
+        run: |
+          mkdir -p release
+          cp -r custom_components/air_sviva release/
+
+      - name: "Create ZIP archive"
+        shell: "bash"
+        run: |
+          cd release
+          zip air-sviva-custom-component.zip -r .
+
+      - name: "Upload release artifact"
+        uses: "softprops/action-gh-release@v2.6.1"
+        with:
+          name: "Air Sviva Custom Component"
+          files: "release/air-sviva-custom-component.zip"
+          body: |
+            A HomeAssistant custom component for Israeli air quality monitoring.
+            Fetches data from air.sviva.gov.il using the air-sviva-api package.
+
+            Features:
+            - Config flow with region/station selection
+            - Auto-select closest station to HA coordinates
+            - Station-specific AQI data fetching
+            - Hebrew translations and localization
+            - Real-time updates with proper report timestamps
+            - Supports station 357 endpoint pattern
