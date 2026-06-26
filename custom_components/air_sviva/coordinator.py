@@ -25,6 +25,16 @@ if TYPE_CHECKING:
     from .data import AirSvivaData
 
 
+INVALID_API_VALUES = {-9999, 9999}
+
+
+def _clean_api_value(value: Any) -> Any | None:
+    """Return None for Air Sviva sentinel values that mean no valid data."""
+    if value in INVALID_API_VALUES:
+        return None
+    return value
+
+
 def _parse_station_channels(station_data: RegionStationData) -> dict[str, Any]:
     """Parse station channels from RegionStationData into channel dict."""
     channels: dict[str, Any] = {}
@@ -33,7 +43,7 @@ def _parse_station_channels(station_data: RegionStationData) -> dict[str, Any]:
         return channels
 
     for channel in station_data.region_data.channels:
-        if not channel.active or channel.value is None:
+        if not channel.active:
             continue
 
         # Use alias (Hebrew name) as description if available
@@ -43,7 +53,7 @@ def _parse_station_channels(station_data: RegionStationData) -> dict[str, Any]:
             "id": channel.id,
             "name": channel.name,
             "alias": channel.alias,
-            "value": channel.value,
+            "value": _clean_api_value(channel.value),
             "status": channel.status,
             "valid": channel.valid,
             "units": channel.units,
@@ -57,12 +67,12 @@ def _parse_station_channels(station_data: RegionStationData) -> dict[str, Any]:
 
 def _parse_station_aqi(station_index: StationIndexData | None) -> dict[str, Any] | None:
     """Parse station AQI data into a sensor-friendly dict."""
-    if station_index is None or station_index.index is None:
+    if station_index is None:
         return None
 
     return {
-        "value": station_index.index,
-        "pollutant_value": station_index.value,
+        "value": _clean_api_value(station_index.index),
+        "pollutant_value": _clean_api_value(station_index.value),
         "pollutant": station_index.pollutant,
         "pollutant_id": station_index.pollutant_id,
         "color": station_index.color,

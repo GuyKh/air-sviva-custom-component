@@ -44,6 +44,7 @@ Platform | Description
 
 Sensors will be created dynamically based on the pollutants available at the selected station.
 The integration also creates an official station AQI sensor, which is populated when AQI data is available from the Ministry of Environmental Protection API.
+Invalid API sentinel values such as `-9999` and `9999` are exposed as unavailable instead of raw sensor values.
 
 ## Sensors
 
