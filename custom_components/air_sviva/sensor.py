@@ -44,7 +44,7 @@ async def async_setup_entry(
 
     station_id = entry_data.station_id
 
-    async_add_entities(
+    entities: list[SensorEntity] = [
         AirSvivaSensor(
             coordinator=coordinator,
             entry_id=entry.entry_id,
@@ -56,7 +56,17 @@ async def async_setup_entry(
             ),
         )
         for pollutant, channel_data in data["channels"].items()
+    ]
+
+    entities.append(
+        AirSvivaAQISensor(
+            coordinator=coordinator,
+            entry_id=entry.entry_id,
+            station_id=station_id,
+        ),
     )
+
+    async_add_entities(entities)
 
 
 class AirSvivaSensor(AirSvivaEntity, SensorEntity):
@@ -128,3 +138,47 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
             attrs["max_value"] = 360
             attrs["min_value"] = 0
         return attrs
+
+
+class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
+    """Air Sviva sensor for the official station AQI."""
+
+    def __init__(
+        self,
+        coordinator: AirSvivaUpdateCoordinator,
+        entry_id: str,
+        station_id: int,
+    ) -> None:
+        """Initialize the AQI sensor."""
+        super().__init__(coordinator, entry_id, station_id)
+        self._attr_unique_id = f"sviva_station_{station_id}_aqi"
+        self.entity_id = f"sensor.sviva_station_{station_id}_aqi"
+        self._attr_translation_key = "aqi"
+        self._attr_native_unit_of_measurement = "AQI"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the current official station AQI value."""
+        data = self.coordinator.data
+        if data is None:
+            return None
+        aqi = data.get("aqi") or {}
+        return aqi.get("value")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        data = self.coordinator.data
+        if data is None:
+            return {}
+        aqi = data.get("aqi") or {}
+        return {
+            "dominant_pollutant": aqi.get("pollutant"),
+            "dominant_pollutant_value": aqi.get("pollutant_value"),
+            "pollutant_id": aqi.get("pollutant_id"),
+            "color": aqi.get("color"),
+            "description": aqi.get("description"),
+            "datetime": aqi.get("datetime"),
+            "index_id": aqi.get("index_id"),
+            "pollutant_time_base": aqi.get("pollutant_time_base"),
+        }

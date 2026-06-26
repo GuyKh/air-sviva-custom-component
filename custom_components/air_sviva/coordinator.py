@@ -7,11 +7,18 @@ from typing import TYPE_CHECKING, Any
 from air_sviva_api.models.exceptions import SvivaAirError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_REGION_ID, CONF_STATION_ID, DOMAIN, LOGGER, SCAN_INTERVAL
+from .const import (
+    CONF_REGION_ID,
+    CONF_STATION_ID,
+    DEFAULT_HOURS_BACK,
+    DOMAIN,
+    LOGGER,
+    SCAN_INTERVAL,
+)
 
 if TYPE_CHECKING:
     from air_sviva_api.client import SvivaAirClient
-    from air_sviva_api.models.reading import RegionStationData
+    from air_sviva_api.models.reading import RegionStationData, StationIndexData
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
@@ -46,6 +53,24 @@ def _parse_station_channels(station_data: RegionStationData) -> dict[str, Any]:
         }
 
     return channels
+
+
+def _parse_station_aqi(station_index: StationIndexData | None) -> dict[str, Any] | None:
+    """Parse station AQI data into a sensor-friendly dict."""
+    if station_index is None or station_index.index is None:
+        return None
+
+    return {
+        "value": station_index.index,
+        "pollutant_value": station_index.value,
+        "pollutant": station_index.pollutant,
+        "pollutant_id": station_index.pollutant_id,
+        "color": station_index.color,
+        "description": station_index.description,
+        "datetime": station_index.datetime,
+        "index_id": station_index.index_id,
+        "pollutant_time_base": station_index.pollutant_time_base,
+    }
 
 
 class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -92,7 +117,11 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             msg = f"Unexpected error: {exc}"
             raise UpdateFailed(msg) from exc
 
-        data: dict[str, Any] = {"station_id": self._station_id, "channels": {}}
+        data: dict[str, Any] = {
+            "station_id": self._station_id,
+            "channels": {},
+            "aqi": None,
+        }
 
         # Find the selected station in the response
         station_data = next(
@@ -107,6 +136,32 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Parse all channels for this station
         data["channels"] = _parse_station_channels(station_data)
+
+        try:
+            index_response = await client.get_stations_latest_index(
+                hours_back=DEFAULT_HOURS_BACK,
+            )
+            station_index = next(
+                (
+                    station
+                    for station in index_response.data or []
+                    if station.station_id == self._station_id
+                ),
+                None,
+            )
+            data["aqi"] = _parse_station_aqi(station_index)
+        except SvivaAirError as exc:
+            LOGGER.warning(
+                "Failed to fetch AQI data for station %s: %s",
+                self._station_id,
+                exc,
+            )
+        except (AttributeError, TypeError, ValueError) as exc:
+            LOGGER.warning(
+                "Unable to parse AQI data for station %s: %s",
+                self._station_id,
+                exc,
+            )
 
         # Get the datetime from the first channel
         if station_data.region_data and station_data.region_data.channels:

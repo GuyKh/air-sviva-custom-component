@@ -43,15 +43,18 @@ Platform | Description
 3. Submit
 
 Sensors will be created dynamically based on the pollutants available at the selected station.
+The integration also creates an official station AQI sensor, which is populated when AQI data is available from the Ministry of Environmental Protection API.
 
 ## Sensors
 
-Each monitored pollutant creates a separate sensor entity. Sensor names automatically adjust based on your Home Assistant language:
+Each monitored pollutant creates a separate sensor entity. An official station AQI sensor is also created. Sensor names automatically adjust based on your Home Assistant language:
 
 - **English:** Shows pollutant names in English (e.g., "SO₂", "Wind Speed", "Temperature")
 - **Hebrew:** Shows non-scientific names in Hebrew (e.g., "מהירות רוח", "טמפרטורה"), scientific notation stays universal (e.g., "SO₂", "PM2.5", "NO₂")
 
 Sensor name format: `sensor.sviva_station_{station_id}_{pollutant}`
+
+Official AQI sensor name format: `sensor.sviva_station_{station_id}_aqi`
 
 ## Logs
 

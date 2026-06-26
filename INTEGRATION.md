@@ -7,7 +7,7 @@ A Home Assistant custom component for Israeli air quality monitoring using data 
 - Config flow with 2-step setup: Region → Station
 - Auto-select closest station via Haversine distance from HA coordinates
 - Dynamic sensors — one entity per pollutant (PM2.5, PM10, NO₂, SO₂, O₃, CO)
-- Station 357 support via `get_station_index_fast` endpoint
+- Official station AQI sensor via the Air Sviva index endpoint
 - Hebrew/English/Arabic translations
 - 10-minute polling interval
 
@@ -36,6 +36,7 @@ Copy `custom_components/air_sviva` to your Home Assistant `config/custom_compone
 ## Sensors
 
 Each pollutant creates a separate sensor entity:
+- AQI (official station air quality index)
 - PM2.5 (µg/m³)
 - PM10 (µg/m³)
 - NO₂ (ppb)

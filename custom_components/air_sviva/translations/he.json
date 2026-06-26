@@ -22,6 +22,7 @@
     "entity": {
         "sensor": {
             "so2": { "name": "SO₂" },
+            "aqi": { "name": "מדד איכות אוויר" },
             "no2": { "name": "NO₂" },
             "no": { "name": "NO" },
             "nox": { "name": "NOₓ" },
