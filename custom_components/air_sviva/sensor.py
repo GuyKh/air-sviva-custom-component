@@ -109,6 +109,17 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         return channel.get("value")
 
     @property
+    def available(self) -> bool:
+        """Return whether the sensor has a valid current value."""
+        data = self.coordinator.data
+        if data is None:
+            return False
+        channel = data.get("channels", {}).get(self._pollutant_name)
+        if channel is None:
+            return False
+        return channel.get("value") is not None
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         data = self.coordinator.data
@@ -122,7 +133,13 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
             "description": channel.get("description"),
             "alias": channel.get("alias"),
             "datetime": channel.get("datetime"),
+            "valid": channel.get("valid"),
+            "status": channel.get("status"),
         }
+        if channel.get("source_value") is not None:
+            attrs["source_value"] = channel.get("source_value")
+        if channel.get("dominant_pollutant") is not None:
+            attrs["dominant_pollutant"] = channel.get("dominant_pollutant")
         if self._is_wind_direction:
             attrs["is_circular"] = True
             attrs["max_value"] = 360

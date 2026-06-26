@@ -46,6 +46,7 @@
             "bp": { "name": "לחץ ברומטרי" },
             "srad": { "name": "קרינת שמש" },
             "rain": { "name": "גשם" },
+            "index": { "name": "מדד איכות אוויר" },
             "uvb": { "name": "קרינה UVB" },
             "dust": { "name": "אבק" },
             "trs": { "name": "TRS" },

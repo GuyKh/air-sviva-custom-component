@@ -52,6 +52,7 @@
             "bp": {"name": "Barometric Pressure"},
             "srad": {"name": "Solar Radiation"},
             "rain": {"name": "Rain"},
+            "index": {"name": "Air Quality Index"},
             "uvb": {"name": "UVB"},
             "dust": {"name": "Dust"},
             "trs": {"name": "TRS"},
