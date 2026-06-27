@@ -21,6 +21,16 @@
     },
     "entity": {
         "sensor": {
+            "aqi": {
+                "name": "מדד איכות אוויר",
+                "state": {
+                    "excellent": "מצוין",
+                    "good": "טוב",
+                    "medium": "בינוני",
+                    "low": "ירוד",
+                    "very_low": "ירוד מאוד"
+                }
+            },
             "so2": { "name": "SO₂" },
             "no2": { "name": "NO₂" },
             "no": { "name": "NO" },

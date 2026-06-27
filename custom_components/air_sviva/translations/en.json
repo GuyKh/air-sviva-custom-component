@@ -27,6 +27,16 @@
     },
     "entity": {
         "sensor": {
+            "aqi": {
+                "name": "AQI",
+                "state": {
+                    "excellent": "Excellent",
+                    "good": "Good",
+                    "medium": "Medium",
+                    "low": "Low",
+                    "very_low": "Very Low"
+                }
+            },
             "so2": { "name": "SO₂" },
             "no2": { "name": "NO₂" },
             "no": { "name": "NO" },

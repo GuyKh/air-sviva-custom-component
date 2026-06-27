@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.sensor import SensorEntity
+from air_sviva_api.aqi import AQIClassification, calc_station_air_quality
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 
 from .const import DOMAIN
 from .entity import AirSvivaEntity
 
 if TYPE_CHECKING:
+    from air_sviva_api.aqi import AirQualityResult
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -44,7 +46,7 @@ async def async_setup_entry(
 
     station_id = entry_data.station_id
 
-    async_add_entities(
+    entities = [
         AirSvivaSensor(
             coordinator=coordinator,
             entry_id=entry.entry_id,
@@ -56,7 +58,15 @@ async def async_setup_entry(
             ),
         )
         for pollutant, channel_data in data["channels"].items()
+    ]
+    entities.append(
+        AirSvivaAQISensor(
+            coordinator=coordinator,
+            entry_id=entry.entry_id,
+            station_id=station_id,
+        ),
     )
+    async_add_entities(entities)
 
 
 class AirSvivaSensor(AirSvivaEntity, SensorEntity):
@@ -127,4 +137,84 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
             attrs["is_circular"] = True
             attrs["max_value"] = 360
             attrs["min_value"] = 0
+        return attrs
+
+
+_AQI_CLASSIFICATION_LABELS: dict[str, str] = {
+    "excellent": "Excellent",
+    "good": "Good",
+    "medium": "Medium",
+    "low": "Low",
+    "very_low": "Very Low",
+    "unknown": "Unknown",
+}
+
+
+class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
+    """
+    Air Sviva AQI (Air Quality Index) sensor.
+
+    Computes the Israeli AQI from all pollutant readings using the
+    piecewise linear interpolation methodology.
+    """
+
+    _attr_translation_key = "aqi"
+    _attr_native_unit_of_measurement = "AQI"
+    _attr_icon = "mdi:air-filter"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        coordinator: AirSvivaUpdateCoordinator,
+        entry_id: str,
+        station_id: int,
+    ) -> None:
+        """Initialize the AQI sensor."""
+        super().__init__(coordinator, entry_id, station_id)
+        self._attr_unique_id = f"sviva_station_{station_id}_aqi"
+        self.entity_id = f"sensor.sviva_station_{station_id}_aqi"
+
+    def _get_aqi_result(self) -> AirQualityResult | None:
+        data = self.coordinator.data
+        if data is None:
+            return None
+        channels = data.get("channels", {})
+        if not channels:
+            return None
+
+        readings: dict[str, float] = {}
+        for name, channel in channels.items():
+            value = channel.get("value")
+            if value is not None:
+                readings[name] = value
+
+        if not readings:
+            return None
+
+        return calc_station_air_quality(readings)
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the current AQI value."""
+        result = self._get_aqi_result()
+        if result is None or result.classification == AQIClassification.UNKNOWN:
+            return None
+        return result.aqi_rounded
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        result = self._get_aqi_result()
+        if result is None:
+            return {}
+        attrs: dict[str, Any] = {
+            "classification": _AQI_CLASSIFICATION_LABELS.get(
+                str(result.classification), str(result.classification)
+            ),
+            "worst_pollutant": (
+                str(result.worst_pollutant) if result.worst_pollutant else None
+            ),
+        }
+        for pollutant, sub_idx in result.sub_indices.items():
+            attrs[f"{pollutant}_sub_index"] = round(sub_idx)
         return attrs
