@@ -75,6 +75,7 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
     _pollutant_name: str
     _channel_data: dict[str, Any]
     _is_wind_direction: bool = False
+    _last_value: float | None = None
 
     def __init__(
         self,
@@ -116,7 +117,11 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         channel = data.get("channels", {}).get(self._pollutant_name)
         if channel is None:
             return None
-        return channel.get("value")
+        value = channel.get("value")
+        if value is not None:
+            self._last_value = value
+            return value
+        return self._last_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -163,6 +168,8 @@ class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
     _attr_icon = "mdi:air-filter"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
+    _last_value: int | None = None
+
     def __init__(
         self,
         coordinator: AirSvivaUpdateCoordinator,
@@ -197,9 +204,10 @@ class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
     def native_value(self) -> int | None:
         """Return the current AQI value."""
         result = self._get_aqi_result()
-        if result is None or result.classification == AQIClassification.UNKNOWN:
-            return None
-        return result.aqi_rounded
+        if result is not None and result.classification != AQIClassification.UNKNOWN:
+            self._last_value = result.aqi_rounded
+            return result.aqi_rounded
+        return self._last_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
