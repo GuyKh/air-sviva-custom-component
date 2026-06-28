@@ -10,8 +10,16 @@ from homeassistant.loader import async_get_loaded_integration
 
 from .const import (
     CONF_REGION_ID,
+    CONF_STATION_ADDRESS,
+    CONF_STATION_CITY,
+    CONF_STATION_HEIGHT,
     CONF_STATION_ID,
+    CONF_STATION_LATITUDE,
+    CONF_STATION_LONGITUDE,
     CONF_STATION_NAME,
+    CONF_STATION_OWNER,
+    CONF_STATION_REGION_NAME,
+    CONF_STATION_TARGET,
     DOMAIN,
     PLATFORMS,
     SHARED_CLIENT_KEY,
@@ -46,6 +54,14 @@ async def async_setup_entry(
         region_id=entry.data[CONF_REGION_ID],
         station_id=entry.data[CONF_STATION_ID],
         station_name=entry.data[CONF_STATION_NAME],
+        station_city=entry.data.get(CONF_STATION_CITY),
+        station_address=entry.data.get(CONF_STATION_ADDRESS),
+        station_owner=entry.data.get(CONF_STATION_OWNER),
+        station_target=entry.data.get(CONF_STATION_TARGET),
+        station_height=entry.data.get(CONF_STATION_HEIGHT),
+        station_latitude=entry.data.get(CONF_STATION_LATITUDE),
+        station_longitude=entry.data.get(CONF_STATION_LONGITUDE),
+        station_region_name=entry.data.get(CONF_STATION_REGION_NAME),
     )
 
     hass.data[DOMAIN][entry.entry_id] = entry_data

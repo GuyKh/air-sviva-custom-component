@@ -129,14 +129,17 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         if data is None:
             return {}
         channel = data.get("channels", {}).get(self._pollutant_name, {})
-        attrs: dict[str, Any] = {
-            "channel_id": channel.get("id"),
-            "pollutant_id": channel.get("pollutant_id"),
-            "color": channel.get("color"),
-            "description": channel.get("description"),
-            "alias": channel.get("alias"),
-            "datetime": channel.get("datetime"),
-        }
+        attrs: dict[str, Any] = dict(super().extra_state_attributes or {})
+        attrs.update(
+            {
+                "channel_id": channel.get("id"),
+                "pollutant_id": channel.get("pollutant_id"),
+                "color": channel.get("color"),
+                "description": channel.get("description"),
+                "alias": channel.get("alias"),
+                "datetime": channel.get("datetime"),
+            }
+        )
         if self._is_wind_direction:
             attrs["is_circular"] = True
             attrs["max_value"] = 360
@@ -188,12 +191,15 @@ class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         idx = self._get_station_index()
+        attrs: dict[str, Any] = dict(super().extra_state_attributes or {})
         if idx is None:
-            return {}
-        attrs: dict[str, Any] = {
-            "classification": idx.description,
-            "worst_pollutant": idx.pollutant,
-        }
+            return attrs
+        attrs.update(
+            {
+                "classification": idx.description,
+                "worst_pollutant": idx.pollutant,
+            }
+        )
         for detail in idx.indexes or []:
             if detail.pollutant and detail.index is not None:
                 attrs[f"{detail.pollutant}_sub_index"] = round(detail.index)
