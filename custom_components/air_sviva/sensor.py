@@ -5,14 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from air_sviva_api.aqi import AQIClassification, calc_station_air_quality
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 
 from .const import DOMAIN
 from .entity import AirSvivaEntity
 
 if TYPE_CHECKING:
-    from air_sviva_api.aqi import AirQualityResult
+    from air_sviva_api.models.reading import StationIndexData
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -145,22 +144,11 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         return attrs
 
 
-_AQI_CLASSIFICATION_LABELS: dict[str, str] = {
-    "excellent": "Excellent",
-    "good": "Good",
-    "medium": "Medium",
-    "low": "Low",
-    "very_low": "Very Low",
-    "unknown": "Unknown",
-}
-
-
 class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
     """
     Air Sviva AQI (Air Quality Index) sensor.
 
-    Computes the Israeli AQI from all pollutant readings using the
-    piecewise linear interpolation methodology.
+    Uses the API-computed station index from /stations/index/latest endpoint.
     """
 
     _attr_translation_key = "aqi"
@@ -181,48 +169,32 @@ class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
         self._attr_unique_id = f"sviva_station_{station_id}_aqi"
         self.entity_id = f"sensor.sviva_station_{station_id}_aqi"
 
-    def _get_aqi_result(self) -> AirQualityResult | None:
+    def _get_station_index(self) -> StationIndexData | None:
         data = self.coordinator.data
         if data is None:
             return None
-        channels = data.get("channels", {})
-        if not channels:
-            return None
-
-        readings: dict[str, float] = {}
-        for name, channel in channels.items():
-            value = channel.get("value")
-            if value is not None:
-                readings[name] = value
-
-        if not readings:
-            return None
-
-        return calc_station_air_quality(readings)
+        return data.get("aqi")
 
     @property
     def native_value(self) -> int | None:
         """Return the current AQI value."""
-        result = self._get_aqi_result()
-        if result is not None and result.classification != AQIClassification.UNKNOWN:
-            self._last_value = result.aqi_rounded
-            return result.aqi_rounded
+        idx = self._get_station_index()
+        if idx is not None and idx.index is not None:
+            self._last_value = round(idx.index)
+            return round(idx.index)
         return self._last_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
-        result = self._get_aqi_result()
-        if result is None:
+        idx = self._get_station_index()
+        if idx is None:
             return {}
         attrs: dict[str, Any] = {
-            "classification": _AQI_CLASSIFICATION_LABELS.get(
-                str(result.classification), str(result.classification)
-            ),
-            "worst_pollutant": (
-                str(result.worst_pollutant) if result.worst_pollutant else None
-            ),
+            "classification": idx.description,
+            "worst_pollutant": idx.pollutant,
         }
-        for pollutant, sub_idx in result.sub_indices.items():
-            attrs[f"{pollutant}_sub_index"] = round(sub_idx)
+        for detail in idx.indexes or []:
+            if detail.pollutant and detail.index is not None:
+                attrs[f"{detail.pollutant}_sub_index"] = round(detail.index)
         return attrs

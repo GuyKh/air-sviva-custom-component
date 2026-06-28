@@ -70,6 +70,8 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         entry_data: AirSvivaData = self.hass.data[DOMAIN][self.config_entry.entry_id]
         client: SvivaAirClient = entry_data.client
 
+        data: dict[str, Any] = {"station_id": self._station_id, "channels": {}}
+
         try:
             # Fetch latest data for the configured station's region
             response: list[RegionStationData] = await client.get_regions_latest_data(
@@ -92,25 +94,27 @@ class AirSvivaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             msg = f"Unexpected error: {exc}"
             raise UpdateFailed(msg) from exc
 
-        data: dict[str, Any] = {"station_id": self._station_id, "channels": {}}
-
         # Find the selected station in the response
         station_data = next(
             (s for s in response if s.station_id == self._station_id), None
         )
 
-        if not station_data:
-            LOGGER.debug("Station %s not found in response", self._station_id)
-            return data
+        if station_data:
+            data["station_id"] = station_data.station_id
 
-        data["station_id"] = station_data.station_id
+            # Parse all channels for this station
+            data["channels"] = _parse_station_channels(station_data)
 
-        # Parse all channels for this station
-        data["channels"] = _parse_station_channels(station_data)
+            # Get the datetime from the first channel
+            if station_data.region_data and station_data.region_data.channels:
+                first_channel = station_data.region_data.channels[0]
+                data["datetime"] = first_channel.datetime
 
-        # Get the datetime from the first channel
-        if station_data.region_data and station_data.region_data.channels:
-            first_channel = station_data.region_data.channels[0]
-            data["datetime"] = first_channel.datetime
+        # Fetch native station AQI index data
+        try:
+            aqi_data = await client.get_station_aqi(self._station_id)
+            data["aqi"] = aqi_data
+        except SvivaAirError:
+            data["aqi"] = None
 
         return data
