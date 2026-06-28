@@ -166,11 +166,7 @@ class AirSvivaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         station_options = {}
         for station in active_stations:
             pollutants = _get_station_pollutants(station)
-            label = (
-                f"{station.name}, {station.city}"
-                if station.city
-                else station.name
-            )
+            label = f"{station.name}, {station.city}" if station.city else station.name
             if pollutants:
                 label = f"{label} - {pollutants}"
             station_options[station.station_id] = label
