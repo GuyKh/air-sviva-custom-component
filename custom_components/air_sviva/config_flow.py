@@ -13,8 +13,16 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .const import (
     CONF_REGION_ID,
+    CONF_STATION_ADDRESS,
+    CONF_STATION_CITY,
+    CONF_STATION_HEIGHT,
     CONF_STATION_ID,
+    CONF_STATION_LATITUDE,
+    CONF_STATION_LONGITUDE,
     CONF_STATION_NAME,
+    CONF_STATION_OWNER,
+    CONF_STATION_REGION_NAME,
+    CONF_STATION_TARGET,
     DOMAIN,
     LOGGER,
 )
@@ -142,12 +150,36 @@ class AirSvivaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             )
             if selected_station:
                 LOGGER.debug("Selected station: %s", selected_station.name)
+
+                region_name = next(
+                    (
+                        r.name
+                        for r in self._regions or []
+                        if r.region_id == self._selected_region_id
+                    ),
+                    None,
+                )
+
+                station_lat = None
+                station_lon = None
+                if selected_station.location:
+                    station_lat = selected_station.location.latitude
+                    station_lon = selected_station.location.longitude
+
                 return self.async_create_entry(
                     title=f"Air Sviva - {selected_station.name}",
                     data={
                         CONF_REGION_ID: self._selected_region_id,
                         CONF_STATION_ID: station_id,
                         CONF_STATION_NAME: selected_station.name,
+                        CONF_STATION_CITY: selected_station.city,
+                        CONF_STATION_ADDRESS: selected_station.address,
+                        CONF_STATION_OWNER: selected_station.owner,
+                        CONF_STATION_TARGET: selected_station.station_target,
+                        CONF_STATION_HEIGHT: selected_station.height,
+                        CONF_STATION_LATITUDE: station_lat,
+                        CONF_STATION_LONGITUDE: station_lon,
+                        CONF_STATION_REGION_NAME: region_name,
                     },
                 )
             LOGGER.error(

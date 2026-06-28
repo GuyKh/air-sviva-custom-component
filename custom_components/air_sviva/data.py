@@ -21,3 +21,11 @@ class AirSvivaData:
     region_id: int
     station_id: int
     station_name: str
+    station_city: str | None = None
+    station_address: str | None = None
+    station_owner: str | None = None
+    station_target: str | None = None
+    station_height: str | None = None
+    station_latitude: float | None = None
+    station_longitude: float | None = None
+    station_region_name: str | None = None
