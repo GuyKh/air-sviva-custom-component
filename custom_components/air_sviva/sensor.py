@@ -5,12 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 
 from .const import DOMAIN
 from .entity import AirSvivaEntity
 
 if TYPE_CHECKING:
+    from air_sviva_api.models.reading import StationIndexData
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -44,7 +45,7 @@ async def async_setup_entry(
 
     station_id = entry_data.station_id
 
-    async_add_entities(
+    entities = [
         AirSvivaSensor(
             coordinator=coordinator,
             entry_id=entry.entry_id,
@@ -56,7 +57,15 @@ async def async_setup_entry(
             ),
         )
         for pollutant, channel_data in data["channels"].items()
+    ]
+    entities.append(
+        AirSvivaAQISensor(
+            coordinator=coordinator,
+            entry_id=entry.entry_id,
+            station_id=station_id,
+        ),
     )
+    async_add_entities(entities)
 
 
 class AirSvivaSensor(AirSvivaEntity, SensorEntity):
@@ -65,6 +74,7 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
     _pollutant_name: str
     _channel_data: dict[str, Any]
     _is_wind_direction: bool = False
+    _last_value: float | None = None
 
     def __init__(
         self,
@@ -106,7 +116,11 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         channel = data.get("channels", {}).get(self._pollutant_name)
         if channel is None:
             return None
-        return channel.get("value")
+        value = channel.get("value")
+        if value is not None:
+            self._last_value = value
+            return value
+        return self._last_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -127,4 +141,60 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
             attrs["is_circular"] = True
             attrs["max_value"] = 360
             attrs["min_value"] = 0
+        return attrs
+
+
+class AirSvivaAQISensor(AirSvivaEntity, SensorEntity):
+    """
+    Air Sviva AQI (Air Quality Index) sensor.
+
+    Uses the API-computed station index from /stations/index/latest endpoint.
+    """
+
+    _attr_translation_key = "aqi"
+    _attr_native_unit_of_measurement = "AQI"
+    _attr_icon = "mdi:air-filter"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    _last_value: int | None = None
+
+    def __init__(
+        self,
+        coordinator: AirSvivaUpdateCoordinator,
+        entry_id: str,
+        station_id: int,
+    ) -> None:
+        """Initialize the AQI sensor."""
+        super().__init__(coordinator, entry_id, station_id)
+        self._attr_unique_id = f"sviva_station_{station_id}_aqi"
+        self.entity_id = f"sensor.sviva_station_{station_id}_aqi"
+
+    def _get_station_index(self) -> StationIndexData | None:
+        data = self.coordinator.data
+        if data is None:
+            return None
+        return data.get("aqi")
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the current AQI value."""
+        idx = self._get_station_index()
+        if idx is not None and idx.index is not None:
+            self._last_value = round(idx.index)
+            return round(idx.index)
+        return self._last_value
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        idx = self._get_station_index()
+        if idx is None:
+            return {}
+        attrs: dict[str, Any] = {
+            "classification": idx.description,
+            "worst_pollutant": idx.pollutant,
+        }
+        for detail in idx.indexes or []:
+            if detail.pollutant and detail.index is not None:
+                attrs[f"{detail.pollutant}_sub_index"] = round(detail.index)
         return attrs
