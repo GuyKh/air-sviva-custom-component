@@ -18,3 +18,5 @@ SCAN_INTERVAL = timedelta(minutes=10)
 DEFAULT_HOURS_BACK = 4
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
+
+SHARED_CLIENT_KEY: str = f"{DOMAIN}_shared_client"
