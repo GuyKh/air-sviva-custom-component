@@ -14,6 +14,7 @@ from .const import (
     CONF_STATION_NAME,
     DOMAIN,
     PLATFORMS,
+    SHARED_CLIENT_KEY,
 )
 from .coordinator import AirSvivaUpdateCoordinator
 from .data import AirSvivaData
@@ -28,13 +29,18 @@ async def async_setup_entry(
     entry: ConfigEntry,
 ) -> bool:
     """Set up the Air Sviva integration from a config entry."""
-    client = SvivaAirClient(session=async_get_clientsession(hass))
-    await client.generate_token()
+    hass.data.setdefault(DOMAIN, {})
+
+    shared_client: SvivaAirClient | None = hass.data[DOMAIN].get(SHARED_CLIENT_KEY)
+    if shared_client is None:
+        shared_client = SvivaAirClient(session=async_get_clientsession(hass))
+        await shared_client.generate_token()
+        hass.data[DOMAIN][SHARED_CLIENT_KEY] = shared_client
 
     coordinator = AirSvivaUpdateCoordinator(hass=hass, config_entry=entry)
 
     entry_data = AirSvivaData(
-        client=client,
+        client=shared_client,
         integration=async_get_loaded_integration(hass, entry.domain),
         coordinator=coordinator,
         region_id=entry.data[CONF_REGION_ID],
@@ -42,7 +48,7 @@ async def async_setup_entry(
         station_name=entry.data[CONF_STATION_NAME],
     )
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry_data
+    hass.data[DOMAIN][entry.entry_id] = entry_data
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -60,6 +66,9 @@ async def async_unload_entry(
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        entry_keys = [k for k in hass.data[DOMAIN] if k != SHARED_CLIENT_KEY]
+        if not entry_keys:
+            hass.data[DOMAIN].pop(SHARED_CLIENT_KEY, None)
     return unload_ok
 
 
