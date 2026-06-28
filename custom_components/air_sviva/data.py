@@ -19,5 +19,15 @@ class AirSvivaData:
     integration: Integration
     coordinator: DataUpdateCoordinator[dict[str, Any]]
     region_id: int
+    region_name: str | None
     station_id: int
     station_name: str
+    station_target: str | None
+    city: str | None
+    owner: str | None
+    address: str | None
+    latitude: float | None
+    longitude: float | None
+    height: str | None
+    device_model: str | None
+    device_manufacturer: str | None

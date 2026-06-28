@@ -12,9 +12,17 @@ from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .const import (
+    CONF_ADDRESS,
+    CONF_CITY,
+    CONF_HEIGHT,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
+    CONF_OWNER,
     CONF_REGION_ID,
+    CONF_REGION_NAME,
     CONF_STATION_ID,
     CONF_STATION_NAME,
+    CONF_STATION_TARGET,
     DOMAIN,
     LOGGER,
 )
@@ -142,12 +150,31 @@ class AirSvivaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             )
             if selected_station:
                 LOGGER.debug("Selected station: %s", selected_station.name)
+                region_name = next(
+                    (
+                        r.name
+                        for r in (self._regions or [])
+                        if r.region_id == self._selected_region_id
+                    ),
+                    None,
+                )
+                location = getattr(selected_station, "location", None)
                 return self.async_create_entry(
                     title=f"Air Sviva - {selected_station.name}",
                     data={
                         CONF_REGION_ID: self._selected_region_id,
+                        CONF_REGION_NAME: region_name,
                         CONF_STATION_ID: station_id,
                         CONF_STATION_NAME: selected_station.name,
+                        CONF_STATION_TARGET: getattr(
+                            selected_station, "station_target", None
+                        ),
+                        CONF_CITY: getattr(selected_station, "city", None),
+                        CONF_OWNER: getattr(selected_station, "owner", None),
+                        CONF_ADDRESS: getattr(selected_station, "address", None),
+                        CONF_HEIGHT: getattr(selected_station, "height", None),
+                        CONF_LATITUDE: (location.latitude if location else None),
+                        CONF_LONGITUDE: (location.longitude if location else None),
                     },
                 )
             LOGGER.error(

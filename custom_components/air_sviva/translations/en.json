@@ -26,6 +26,10 @@
         }
     },
     "entity": {
+        "device_label": {
+            "station_type": { "name": "Station Type" },
+            "owner": { "name": "Owner" }
+        },
         "sensor": {
             "aqi": {
                 "name": "AQI",

@@ -20,6 +20,10 @@
         }
     },
     "entity": {
+        "device_label": {
+            "station_type": { "name": "סוג" },
+            "owner": { "name": "בעלים" }
+        },
         "sensor": {
             "aqi": {
                 "name": "מדד איכות אוויר",
