@@ -1,6 +1,6 @@
 {
   "name": "Air Sviva",
-  "homeassistant": "2026.5.0"
+  "homeassistant": "2026.5.0",
   "filename": "air-sviva-custom-component.zip",
   "hide_default_branch": true,
   "render_readme": true,
