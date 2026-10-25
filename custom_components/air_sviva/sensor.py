@@ -1,3 +1,16 @@
+# Copyright 2024 Guy Khnyan
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Sensor platform for Air Sviva."""
 
 from __future__ import annotations
@@ -45,6 +58,7 @@ async def async_setup_entry(
 
     station_id = entry_data.station_id
 
+    # Create sensors for all channels from the data
     entities = [
         AirSvivaSensor(
             coordinator=coordinator,
@@ -58,6 +72,51 @@ async def async_setup_entry(
         )
         for pollutant, channel_data in data["channels"].items()
     ]
+
+    # Also create sensors for pollutants that have sub-indices in the AQI data
+    # but are not present in the channels list (fixes issue #26)
+    aqi_data = data.get("aqi")
+    if aqi_data is not None:
+        idx: Any = aqi_data  # type: ignore[assignment]
+        if hasattr(idx, "indexes") and idx.indexes:
+            # Get the set of pollutant names already have sensors for
+            existing_pollutants = {init_data.pollutant_name for init_data in [
+                SensorInitData(
+                    station_id=station_id,
+                    station_name=entry_data.station_name,
+                    pollutant_name=pollutant,
+                    channel_data=channel_data,
+                )
+                for pollutant, channel_data in data["channels"].items()
+            ]}
+
+            for detail in idx.indexes:
+                pollutant = detail.pollutant
+                if pollutant and pollutant not in existing_pollutants:
+                    entities.append(
+                        AirSvivaSensor(
+                            coordinator=coordinator,
+                            entry_id=entry.entry_id,
+                            init_data=SensorInitData(
+                                station_id=station_id,
+                                station_name=entry_data.station_name,
+                                pollutant_name=pollutant,
+                                channel_data={
+                                    "id": 0,
+                                    "name": pollutant,
+                                    "alias": None,
+                                    "value": detail.index,
+                                    "status": 0,
+                                    "valid": True,
+                                    "units": "AQI",
+                                    "pollutant_id": None,
+                                    "datetime": None,
+                                    "description": None,
+                                },
+                            ),
+                        ),
+                    )
+
     entities.append(
         AirSvivaAQISensor(
             coordinator=coordinator,
@@ -113,14 +172,28 @@ class AirSvivaSensor(AirSvivaEntity, SensorEntity):
         data = self.coordinator.data
         if data is None:
             return None
+
+        # First, try to get value from channels
         channel = data.get("channels", {}).get(self._pollutant_name)
-        if channel is None:
-            return None
-        value = channel.get("value")
-        if value is not None:
-            self._last_value = value
-            return value
-        return self._last_value
+        if channel is not None:
+            value = channel.get("value")
+            if value is not None:
+                self._last_value = value
+                return value
+
+        # Fall back to AQI sub-index data (fixes issue #26)
+        aqi_data = data.get("aqi")
+        if aqi_data is not None:
+            idx: Any = aqi_data  # type: ignore[assignment]
+            if hasattr(idx, "indexes") and idx.indexes:
+                for detail in idx.indexes:
+                    pollutant_match = detail.pollutant == self._pollutant_name
+                    index_valid = detail.index is not None
+                    if pollutant_match and index_valid:
+                        self._last_value = round(detail.index)
+                        return self._last_value
+
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
