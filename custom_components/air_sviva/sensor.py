@@ -80,15 +80,18 @@ async def async_setup_entry(
         idx: Any = aqi_data  # type: ignore[assignment]
         if hasattr(idx, "indexes") and idx.indexes:
             # Get the set of pollutant names already have sensors for
-            existing_pollutants = {init_data.pollutant_name for init_data in [
-                SensorInitData(
-                    station_id=station_id,
-                    station_name=entry_data.station_name,
-                    pollutant_name=pollutant,
-                    channel_data=channel_data,
-                )
-                for pollutant, channel_data in data["channels"].items()
-            ]}
+            existing_pollutants = {
+                init_data.pollutant_name
+                for init_data in [
+                    SensorInitData(
+                        station_id=station_id,
+                        station_name=entry_data.station_name,
+                        pollutant_name=pollutant,
+                        channel_data=channel_data,
+                    )
+                    for pollutant, channel_data in data["channels"].items()
+                ]
+            }
 
             for detail in idx.indexes:
                 pollutant = detail.pollutant
